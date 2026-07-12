@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { Line } from "@/data/lines";
+import type { Line, Topic, Mood } from "@/data/lines";
+import { TOPICS, MOODS } from "@/data/lines";
 import {
   framed,
   toggle,
@@ -10,7 +11,7 @@ import {
   saveFavorites,
 } from "@/lib/favorites";
 
-type Filter = "all" | "favorites";
+type View = "all" | "favorites";
 
 async function copyText(text: string): Promise<boolean> {
   try {
@@ -21,12 +22,20 @@ async function copyText(text: string): Promise<boolean> {
   }
 }
 
+function toggleIn<T>(set: Set<T>, value: T): Set<T> {
+  const next = new Set(set);
+  if (next.has(value)) next.delete(value);
+  else next.add(value);
+  return next;
+}
+
 export default function CurationTable({ lines }: { lines: Line[] }) {
   const [favorites, setFavorites] = useState<Set<string>>(new Set());
-  const [filter, setFilter] = useState<Filter>("all");
+  const [view, setView] = useState<View>("all");
+  const [topicFilters, setTopicFilters] = useState<Set<Topic>>(new Set());
+  const [moodFilters, setMoodFilters] = useState<Set<Mood>>(new Set());
   const [toast, setToast] = useState<string | null>(null);
 
-  // Hydrate from localStorage after mount (SSR-safe).
   useEffect(() => setFavorites(loadFavorites()), []);
 
   function flashToast(msg: string) {
@@ -34,7 +43,7 @@ export default function CurationTable({ lines }: { lines: Line[] }) {
     window.setTimeout(() => setToast(null), 1600);
   }
 
-  function onToggle(id: string) {
+  function onToggleFav(id: string) {
     setFavorites((prev) => {
       const next = toggle(prev, id);
       saveFavorites(next);
@@ -56,9 +65,17 @@ export default function CurationTable({ lines }: { lines: Line[] }) {
     flashToast(ok ? `Copied ${favorites.size} favorite${favorites.size > 1 ? "s" : ""}` : "Copy failed");
   }
 
+  const anyFilter = topicFilters.size > 0 || moodFilters.size > 0;
+
   const visible = useMemo(
-    () => (filter === "favorites" ? lines.filter((l) => favorites.has(l.id)) : lines),
-    [filter, lines, favorites],
+    () =>
+      lines.filter((l) => {
+        if (view === "favorites" && !favorites.has(l.id)) return false;
+        if (topicFilters.size > 0 && !l.topics.some((t) => topicFilters.has(t))) return false;
+        if (moodFilters.size > 0 && !l.moods.some((m) => moodFilters.has(m))) return false;
+        return true;
+      }),
+    [lines, view, favorites, topicFilters, moodFilters],
   );
 
   return (
@@ -75,20 +92,20 @@ export default function CurationTable({ lines }: { lines: Line[] }) {
           Dear Crisis,
         </h1>
         <p className="mt-5 max-w-xl font-[family-name:var(--font-serif)] text-lg italic leading-relaxed text-[color:var(--charcoal)] sm:text-xl">
-          An insight, then a question to sit with. Browse, favorite the ones that
-          catch you, and take them into the chat.
+          An insight, then a question to sit with. Browse, filter by mood or theme,
+          favorite the ones that catch you, and take them into the chat.
         </p>
       </header>
 
       {/* Toolbar */}
-      <div className="sticky top-0 z-10 -mx-5 mb-8 flex flex-wrap items-center gap-3 bg-[var(--paper-cream)]/85 px-5 py-3 backdrop-blur-sm sm:-mx-8 sm:px-8">
+      <div className="sticky top-0 z-10 -mx-5 mb-6 flex flex-wrap items-center gap-3 bg-[var(--paper-cream)]/85 px-5 py-3 backdrop-blur-sm sm:-mx-8 sm:px-8">
         <div className="inline-flex overflow-hidden rounded-full border-2 border-[color:var(--ink-black)]">
-          <FilterButton active={filter === "all"} onClick={() => setFilter("all")}>
+          <SegButton active={view === "all"} onClick={() => setView("all")}>
             All · {lines.length}
-          </FilterButton>
-          <FilterButton active={filter === "favorites"} onClick={() => setFilter("favorites")}>
+          </SegButton>
+          <SegButton active={view === "favorites"} onClick={() => setView("favorites")}>
             ♥ Favorites · {favorites.size}
-          </FilterButton>
+          </SegButton>
         </div>
         <button
           onClick={onExport}
@@ -98,10 +115,39 @@ export default function CurationTable({ lines }: { lines: Line[] }) {
         </button>
       </div>
 
+      {/* Filters */}
+      <div className="mb-8 space-y-3">
+        <ChipRow
+          label="Theme"
+          items={TOPICS}
+          active={topicFilters}
+          onToggle={(k) => setTopicFilters((p) => toggleIn(p, k))}
+        />
+        <ChipRow
+          label="Mood"
+          items={MOODS}
+          active={moodFilters}
+          onToggle={(k) => setMoodFilters((p) => toggleIn(p, k))}
+        />
+        {anyFilter && (
+          <button
+            onClick={() => {
+              setTopicFilters(new Set());
+              setMoodFilters(new Set());
+            }}
+            className="text-xs font-semibold uppercase tracking-wide text-[color:var(--riso-coral)] underline underline-offset-4"
+          >
+            Clear filters · showing {visible.length}
+          </button>
+        )}
+      </div>
+
       {/* Grid */}
       {visible.length === 0 ? (
         <p className="py-24 text-center font-[family-name:var(--font-serif)] text-xl italic text-[color:var(--muted-teal)]">
-          No keepers yet — tap the heart on the ones that land.
+          {view === "favorites" && !anyFilter
+            ? "No keepers yet — tap the heart on the ones that land."
+            : "Nothing matches those filters — try loosening them."}
         </p>
       ) : (
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
@@ -110,7 +156,7 @@ export default function CurationTable({ lines }: { lines: Line[] }) {
               key={line.id}
               line={line}
               favorited={favorites.has(line.id)}
-              onToggle={() => onToggle(line.id)}
+              onToggle={() => onToggleFav(line.id)}
               onCopy={() => onCopy(line)}
             />
           ))}
@@ -127,7 +173,7 @@ export default function CurationTable({ lines }: { lines: Line[] }) {
   );
 }
 
-function FilterButton({
+function SegButton({
   active,
   onClick,
   children,
@@ -147,6 +193,43 @@ function FilterButton({
     >
       {children}
     </button>
+  );
+}
+
+function ChipRow<K extends string>({
+  label,
+  items,
+  active,
+  onToggle,
+}: {
+  label: string;
+  items: { key: K; label: string }[];
+  active: Set<K>;
+  onToggle: (key: K) => void;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <span className="mr-1 w-12 shrink-0 text-[0.65rem] font-bold uppercase tracking-[0.2em] text-[color:var(--muted-teal)]">
+        {label}
+      </span>
+      {items.map((it) => {
+        const on = active.has(it.key);
+        return (
+          <button
+            key={it.key}
+            onClick={() => onToggle(it.key)}
+            aria-pressed={on}
+            className={`rounded-full border-2 border-[color:var(--ink-black)] px-3 py-1 text-xs font-semibold uppercase tracking-wide transition-colors ${
+              on
+                ? "bg-[color:var(--ink-black)] text-[color:var(--paper-cream)]"
+                : "bg-transparent text-[color:var(--ink-black)] hover:bg-[color:var(--ink-black)]/5"
+            }`}
+          >
+            {it.label}
+          </button>
+        );
+      })}
+    </div>
   );
 }
 

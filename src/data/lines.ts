@@ -3,12 +3,19 @@
 // Shape: a grounded insight/factoid, a beat, then a personal question that turns
 // the reader inward. Add or cut freely; each needs a stable, unique `id`.
 
+export type Topic = "nature" | "systems" | "spirit" | "mind" | "work" | "myth";
+export type Mood = "wry" | "tender" | "provocative" | "awe";
+
 export type Line = {
   id: string;
   text: string;
+  topics: Topic[];
+  moods: Mood[];
 };
 
-export const lines: Line[] = [
+type RawLine = { id: string; text: string };
+
+const rawLines: RawLine[] = [
   { id: "1", text: "a brainless slime mold redesigned the Tokyo rail network in a weekend. I've been “getting around to” reorganizing one closet since 2023. What's the system in your life a blob would've fixed by now?" },
   { id: "2", text: "the wolves repaired an entire river by eating elk — no summit, no steering committee. What's the elk in your life you keep scheduling meetings about instead of just eating?" },
   { id: "3", text: "trees quietly pump sugar underground to feed each other's dying seedlings, ad-free, better uptime than the internet. Who's a seedling you could slip a little sugar to this week?" },
@@ -309,4 +316,106 @@ export const lines: Line[] = [
   { id: "298", text: "Lao Tzu said a journey of a thousand miles begins beneath your feet — not with a plan, with a step. What thousand-mile thing have you been planning instead of starting?" },
   { id: "299", text: "the last line of nearly every wisdom tradition rhymes: pay attention, give thanks, let go, be kind, come home. Which of those five is your soul most behind on right now?" },
   { id: "300", text: "after all of this — the fungi, the wolves, the stars, the saints, the slow exhale — the only real question left is the first one. What do you, specifically, want to do with the fact that you're alive right now?" },
+];
+
+// Tags per line, encoded as "<topics>|<moods>" using the single-letter codes
+// below. Topics: N=nature S=systems P=spirit M=mind W=work Y=myth.
+// Moods: w=wry t=tender p=provocative a=awe. Edit here to retune filtering.
+const TAGS: Record<string, string> = {
+  "1": "SM|w", "2": "NS|w", "3": "N|t", "4": "NP|p", "5": "NP|t",
+  "6": "S|p", "7": "SW|w", "8": "NP|t", "9": "NM|t", "10": "PM|p",
+  "11": "NS|p", "12": "SM|p", "13": "SW|p", "14": "NW|w", "15": "SM|p",
+  "16": "M|p", "17": "S|p", "18": "NS|p", "19": "PN|t", "20": "PM|t",
+  "21": "PM|t", "22": "PM|t", "23": "SW|p", "24": "SM|p", "25": "NP|t",
+  "26": "S|w", "27": "PM|t", "28": "NM|t", "29": "NW|p", "30": "PM|t",
+  "31": "SP|p", "32": "NW|w", "33": "MP|p", "34": "PM|t", "35": "WP|p",
+  "36": "PN|a", "37": "PM|w", "38": "SM|w", "39": "NP|t", "40": "NP|a",
+  "41": "P|t", "42": "SM|p", "43": "SM|w", "44": "NM|t", "45": "NM|t",
+  "46": "SW|p", "47": "SP|t", "48": "SM|p", "49": "PM|t", "50": "P|t",
+  "51": "SW|p", "52": "S|w", "53": "NW|w", "54": "N|a", "55": "N|a",
+  "56": "NW|t", "57": "NP|a", "58": "NP|t", "59": "NP|t", "60": "NM|a",
+  "61": "N|w", "62": "NM|w", "63": "N|t", "64": "NP|a", "65": "NM|t",
+  "66": "NP|t", "67": "NP|t", "68": "NS|p", "69": "NP|t", "70": "NM|a",
+  "71": "NM|a", "72": "NM|t", "73": "NP|t", "74": "NP|a", "75": "NP|t",
+  "76": "NP|t", "77": "NW|t", "78": "NW|w", "79": "NS|p", "80": "NM|p",
+  "81": "S|p", "82": "SW|p", "83": "SW|p", "84": "SW|w", "85": "SW|w",
+  "86": "MS|p", "87": "SW|p", "88": "S|t", "89": "NS|p", "90": "S|p",
+  "91": "SM|p", "92": "SM|p", "93": "M|w", "94": "SY|p", "95": "SW|p",
+  "96": "SM|p", "97": "SP|t", "98": "SM|w", "99": "P|t", "100": "P|t",
+  "101": "PM|t", "102": "PM|t", "103": "NP|t", "104": "PM|t", "105": "PW|t",
+  "106": "PM|p", "107": "PS|p", "108": "PM|a", "109": "PM|a", "110": "PM|a",
+  "111": "PM|t", "112": "P|a", "113": "PM|t", "114": "PM|t", "115": "PN|a",
+  "116": "PM|t", "117": "PM|t", "118": "PM|t", "119": "PM|t", "120": "PN|t",
+  "121": "PW|t", "122": "PM|t", "123": "PN|t", "124": "PM|t", "125": "PM|t",
+  "126": "PM|w", "127": "NS|p", "128": "NM|t", "129": "NS|a", "130": "NM|t",
+  "131": "NP|t", "132": "SP|t", "133": "MW|p", "134": "SW|p", "135": "NP|t",
+  "136": "SM|p", "137": "S|t", "138": "S|p", "139": "NS|t", "140": "NP|p",
+  "141": "PN|a", "142": "PN|t", "143": "PM|t", "144": "NP|t", "145": "PM|p",
+  "146": "PM|p", "147": "PM|a", "148": "PM|t", "149": "PS|t", "150": "PM|t",
+  "151": "NM|p", "152": "NP|t", "153": "NM|p", "154": "NM|t", "155": "NP|a",
+  "156": "PM|a", "157": "NP|t", "158": "NS|t", "159": "NM|w", "160": "NM|t",
+  "161": "NM|p", "162": "MS|p", "163": "MW|p", "164": "MS|t", "165": "MP|t",
+  "166": "PM|p", "167": "PM|p", "168": "YM|t", "169": "YM|p", "170": "YS|w",
+  "171": "YW|t", "172": "M|p", "173": "SM|p", "174": "WS|p", "175": "SW|w",
+  "176": "SM|p", "177": "PW|t", "178": "WM|w", "179": "SM|p", "180": "SW|p",
+  "181": "YM|t", "182": "YS|p", "183": "YS|p", "184": "YS|p", "185": "YS|p",
+  "186": "YP|t", "187": "YM|p", "188": "YM|t", "189": "YM|w", "190": "SM|p",
+  "191": "PM|t", "192": "SM|w", "193": "SP|p", "194": "SW|p", "195": "NS|a",
+  "196": "SM|p", "197": "SN|p", "198": "NS|t", "199": "SM|t", "200": "MP|a",
+  "201": "MS|p", "202": "PM|t", "203": "MP|t", "204": "MP|t", "205": "MP|t",
+  "206": "M|t", "207": "NM|w", "208": "NM|w", "209": "MP|a", "210": "M|p",
+  "211": "SM|p", "212": "SM|p", "213": "SM|p", "214": "NP|t", "215": "SM|p",
+  "216": "NP|t", "217": "NM|t", "218": "NS|t", "219": "YM|p", "220": "PM|p",
+  "221": "PS|t", "222": "YM|p", "223": "SM|p", "224": "NP|a", "225": "NP|a",
+  "226": "MP|t", "227": "NS|p", "228": "NM|p", "229": "PW|t", "230": "PW|w",
+  "231": "YM|t", "232": "YM|w", "233": "SM|w", "234": "SW|t", "235": "YS|p",
+  "236": "MP|t", "237": "NM|p", "238": "NP|t", "239": "NP|t", "240": "PM|t",
+  "241": "PM|p", "242": "NP|t", "243": "PM|t", "244": "MS|p", "245": "NM|t",
+  "246": "NS|p", "247": "NM|p", "248": "NS|t", "249": "WS|w", "250": "PN|t",
+  "251": "PM|t", "252": "PN|t", "253": "NS|w", "254": "NP|t", "255": "SP|t",
+  "256": "PM|p", "257": "NP|t", "258": "PM|t", "259": "NP|t", "260": "PM|a",
+  "261": "PN|p", "262": "NM|t", "263": "NP|t", "264": "PM|a", "265": "PN|t",
+  "266": "MP|t", "267": "PM|p", "268": "NP|t", "269": "SP|p", "270": "NP|t",
+  "271": "MP|t", "272": "SW|w", "273": "MP|t", "274": "PM|t", "275": "NP|t",
+  "276": "MP|t", "277": "NP|t", "278": "MS|p", "279": "PN|t", "280": "PM|t",
+  "281": "NP|t", "282": "MP|t", "283": "NM|w", "284": "PS|p", "285": "NP|t",
+  "286": "NP|t", "287": "PW|p", "288": "PM|t", "289": "NM|p", "290": "PM|t",
+  "291": "PM|t", "292": "PN|t", "293": "YM|w", "294": "MP|t", "295": "MP|p",
+  "296": "MN|t", "297": "PM|t", "298": "PM|w", "299": "PM|t", "300": "PM|a",
+};
+
+const TOPIC_CODE: Record<string, Topic> = {
+  N: "nature", S: "systems", P: "spirit", M: "mind", W: "work", Y: "myth",
+};
+const MOOD_CODE: Record<string, Mood> = {
+  w: "wry", t: "tender", p: "provocative", a: "awe",
+};
+
+function decodeTags(code: string): { topics: Topic[]; moods: Mood[] } {
+  const [t = "", m = ""] = code.split("|");
+  return {
+    topics: [...t].map((c) => TOPIC_CODE[c]).filter(Boolean),
+    moods: [...m].map((c) => MOOD_CODE[c]).filter(Boolean),
+  };
+}
+
+export const lines: Line[] = rawLines.map((l) => ({
+  ...l,
+  ...decodeTags(TAGS[l.id] ?? ""),
+}));
+
+export const TOPICS: { key: Topic; label: string }[] = [
+  { key: "nature", label: "Nature" },
+  { key: "systems", label: "Systems" },
+  { key: "spirit", label: "Spirit" },
+  { key: "mind", label: "Mind" },
+  { key: "work", label: "Money & Work" },
+  { key: "myth", label: "Myth & Philosophy" },
+];
+
+export const MOODS: { key: Mood; label: string }[] = [
+  { key: "wry", label: "Wry" },
+  { key: "tender", label: "Tender" },
+  { key: "provocative", label: "Provocative" },
+  { key: "awe", label: "Awe" },
 ];

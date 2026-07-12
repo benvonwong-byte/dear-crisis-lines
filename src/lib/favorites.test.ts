@@ -9,9 +9,9 @@ import {
 import type { Line } from "@/data/lines";
 
 const pool: Line[] = [
-  { id: "1", text: "one." },
-  { id: "2", text: "two." },
-  { id: "3", text: "three." },
+  { id: "1", text: "one.", topics: [], moods: [] },
+  { id: "2", text: "two.", topics: [], moods: [] },
+  { id: "3", text: "three.", topics: [], moods: [] },
 ];
 
 describe("framed", () => {
