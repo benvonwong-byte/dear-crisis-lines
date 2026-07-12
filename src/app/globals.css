@@ -1,0 +1,84 @@
+@import "tailwindcss";
+
+:root {
+  /* Overwhelm palette */
+  --overwhelm-blue: #4A90FF;
+  --overwhelm-red: #FF3B30;
+  --overwhelm-white: #F0F0F0;
+  --overwhelm-yellow: #FFD60A;
+
+  /* Analog palette */
+  --ink-black: #1A1A1A;
+  --paper-cream: #F5F0E8;
+  --riso-coral: #E85D4A;
+  --muted-teal: #5B8A8A;
+  --charcoal: #3D3D3D;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  background-color: var(--paper-cream);
+  /* Paper grain — subtle fiber texture across entire page */
+  background-image:
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='paper'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.04' numOctaves='5' stitchTiles='stitch' seed='3'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23paper)' opacity='0.08'/%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='fine'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch' seed='7'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23fine)' opacity='0.04'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  background-blend-mode: multiply;
+}
+
+/* Paper grain overlay — apply to analog sections */
+.paper-texture {
+  position: relative;
+}
+.paper-texture::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  background-repeat: repeat;
+  pointer-events: none;
+  mix-blend-mode: multiply;
+  z-index: -1;
+}
+
+/* Riso misregistration effect */
+.riso-offset {
+  position: relative;
+}
+.riso-offset::before {
+  content: attr(data-text);
+  position: absolute;
+  left: 2px;
+  top: 1px;
+  color: var(--riso-coral);
+  opacity: 0.3;
+  z-index: -1;
+}
+
+/* Halftone dot pattern */
+.halftone {
+  background-image: radial-gradient(circle, var(--ink-black) 0.5px, transparent 0.5px);
+  background-size: 6px 6px;
+  opacity: 0.04;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Selection color */
+::selection {
+  background-color: var(--riso-coral);
+  color: var(--paper-cream);
+}
+
+/* Hard riso drop-shadow card */
+.riso-card {
+  box-shadow: 5px 5px 0px var(--ink-black);
+}
+.riso-card-coral {
+  box-shadow: 5px 5px 0px var(--riso-coral);
+}
